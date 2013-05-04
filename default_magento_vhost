@@ -1,0 +1,99 @@
+server {
+  listen 37.247.54.41:80;																			## IP:Porta su cui restare in ascolo - CAMBIARE!!!
+	root	   /usr/share/nginx/html;																	## la root del sito
+	index	   index.php;																				## Mostra prima un file *.php
+	server_name	_;																						## URL del server web - CAMBIARE!!!
+	access_log /var/log/nginx/root_access.log ;												     		## Log ACCESSO
+	error_log /var/log/nginx/root_error.log notice;													    ## Log ERRORI
+	autoindex off;																						## Non fare listing delle sottocartelle/files
+	server_tokens off;
+
+	error_page 403 = 404;
+
+    expires 86400s;
+    add_header Pragma public;
+    add_header Cache-Control "max-age=86400, public, must-revalidate, proxy-revalidate";
+																					
+	location = /robots.txt {																			## Non loggare le attività del robot.txt
+	allow all;
+	log_not_found off;
+	access_log off;
+	}
+	 
+	location / {
+		index index.html index.php;
+		try_files $uri $uri/ @handler;
+		expires 7d;																						## Expire in 7giorni
+	}
+	 
+	location ^~ /(app|includes|lib|media/downloadable|pkginfo|report/config.xml|var)/ { internal; }		## Non rendere visibili queste sottocartelle
+
+	location /var/export/ { internal; }																	## Non rendere visibili queste sottocartelle
+
+	location ~* \.(js|css|png|jpg|jpeg|gif|ico)$ {
+        expires max;																					## Expire al massimo
+        log_not_found off;
+		access_log off;
+		add_header Pragma public;
+        add_header Cache-Control "max-age=31536000, public";
+    }
+
+	location /. { return 404; }
+	location @handler { rewrite / /index.php; }
+	location ~* .php/ { rewrite ^(.*.php)/ $1 last; }
+	location ~* .php$ {
+		if (!-e $request_filename) { rewrite / /index.php last; }
+		expires 7d;
+		fastcgi_pass unix:/var/run/php5-fpm.sock;																	## Elabora il php tramite PHP5-FPM
+		#fastcgi_pass 127.0.0.1:9000;
+		fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+		fastcgi_split_path_info ^(.+.php)(.*)$;
+		fastcgi_param MAGE_RUN_CODE default;
+		fastcgi_param MAGE_RUN_TYPE store;
+		include fastcgi_params;
+		add_header Powered-By 'www.x86host.it';
+		add_header Pragma public;
+        add_header Cache-Control "max-age=31536000, public";
+	}
+
+    location /mywebsql {
+           root /usr/share/nginx/;
+           index index.php index.html index.htm;
+           location ~ ^/mywebsql/(.+\.php)$ {
+                   try_files $uri =404;
+                   root /usr/share/nginx/;
+                   fastcgi_pass unix:/var/run/php5-fpm.sock;
+                   #fastcgi_pass 127.0.0.1:9000;
+                   fastcgi_index index.php;
+                   fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+                   include /etc/nginx/fastcgi_params;
+           }
+           location ~* ^/mywebsql/(.+\.(jpg|jpeg|gif|css|png|js|ico|html|xml|txt))$ {
+                   root /usr/share/nginx/;
+           }
+    }
+
+location /apc {
+           root /usr/share/nginx/;
+           index index.php index.html index.htm;
+           location ~ ^/apc/(.+\.php)$ {
+                   try_files $uri =404;
+                   root /usr/share/nginx/;
+                   fastcgi_pass unix:/var/run/php5-fpm.sock;
+                   #fastcgi_pass 127.0.0.1:9000;
+                   fastcgi_index index.php;
+                   fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+                   include /etc/nginx/fastcgi_params;
+           }
+           location ~* ^/apc/(.+\.(jpg|jpeg|gif|css|png|js|ico|html|xml|txt))$ {
+                   root /usr/share/nginx/;
+           }
+    }
+
+	    
+}
+	
+	
+
+
+
